@@ -59,6 +59,11 @@
 ** Private type definitions
 **====================================================================================
 */
+	enum ScreenState{
+		SCREEN_MAIN_MENU,
+		SCREEN_GAME,
+		SCREEN_SETTINGS
+	};
 	enum Direction {
 		UP,
 		DOWN,
@@ -97,6 +102,7 @@ Private void snakeEat(void);
 Private void snakeDie(void);
 Private void snakeCollision(void);
 Private void drawBackground(void);
+Private void drawSnakeGame(void);
 
 /*
 **====================================================================================
@@ -105,18 +111,14 @@ Private void drawBackground(void);
 */
 
 uint16_t * priv_frame_buffer;
-#ifdef GHOST_TEST
-#define GHOST_SPEED 4
-uint16_t * priv_ghost_buffer;
-Private int ghost_position = 0;
-Private int ghost_direction = GHOST_SPEED;
-#endif
 Private struct Snake snake = {
 	.body = {{0, 0}},
 	.length = 1,
 	.direction = RIGHT
 };
 uint16_t * priv_snake_buffer;
+
+enum ScreenState currentScreen = SCREEN_GAME;
 
 /*
 **====================================================================================
@@ -180,14 +182,21 @@ void app_main(void)
 	/* Main CPU cycle */
 	while(1)
 	{
+
+		switch (currentScreen) {
+        case SCREEN_MAIN_MENU:
+/*             updateMainMenuScreen(); */
+            break;
+        case SCREEN_GAME:
+            drawSnakeGame();
+            break;
+        case SCREEN_SETTINGS:
+/*             updateSettingsScreen(); */
+            break;
+		}
+
 		vTaskDelayUntil( &xLastWakeTime, xFrequency );
-#ifdef GHOST_TEST
-		/* Simple test for drawing a moving bitmap on the screen. */
-		drawGhost();
-#endif
-		printf("Snake pos x: %d\n", snake.body[0].x);
- 		drawBackground();
-		drawSnake();
+		
 	}
 }
 
@@ -254,6 +263,18 @@ Private void drawBmpInFrameBuf(int xPos, int yPos, int width, int height, uint16
 		}
 	}
 }
+
+Private void drawSnakeGame(void) {
+	// Draw the background
+	drawBackground();
+
+	// Draw the snake
+	drawSnake();
+
+	// Flush the frame buffer
+	display_drawScreenBuffer(priv_frame_buffer);
+}
+
 Private void drawBackground(void) {
 	// Draw the background
 	drawRectangleInFrameBuf(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, COLOR_ORANGE);
