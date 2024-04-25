@@ -16,6 +16,10 @@
 /* The SD card functionality has been moved to its own separate file for this project. */
 #include "sdCard.h"
 
+//ma ei tea kuidas seda parandada veel
+#include "ili9341.h"
+
+
 /*
 **====================================================================================
 ** Private constant definitions
@@ -70,6 +74,7 @@
 		int length;
 		enum Direction direction;
 	};
+
 /*
 **====================================================================================
 ** Private function forward declarations
@@ -108,6 +113,20 @@ Private struct Snake snake = {
 	.direction = RIGHT
 };
 uint16_t * priv_snake_buffer;
+
+//main menu
+
+#define TFT_WIDTH 320 
+#define TFT_HEIGHT 240
+
+#define BUTTON_WIDTH 100
+#define BUTTON_HEIGHT 20
+#define BUTTON_X 20
+#define BUTTON_Y_START 100
+#define BUTTON_Y_GAP 20
+
+#define SELECT_COLOR	ILI9341_RED
+#define UNSELECT_COLOR	ILI9341_WHITE
 
 /*
 **====================================================================================
@@ -167,6 +186,25 @@ void app_main(void)
 	TickType_t xLastWakeTime;
 	const TickType_t xFrequency = 40u / portTICK_PERIOD_MS;
 	xLastWakeTime = xTaskGetTickCount ();
+
+	//MAIN MENU
+	//init display
+	ili9341_init(TFT_WIDTH, TFT_HEIGHT);
+
+	//fill screen with black
+	ili9341_fill_screen(ILI9341_BLACK);
+
+	//set text color
+	ili9341_set_text_color(ILI9341_WHITE, ILI9341_BLACK);
+
+	//display menu
+	ili9341_draw_string(40, 50, "Main Menu", 2);
+
+
+	draw_button("Start Game", BUTTON_X, BUTTON_Y_START, BUTTON_WIDTH, BUTTON_HEIGHT, SELECT_COLOR);
+	draw_button("Settings", BUTTON_X, BUTTON_Y_START + BUTTON_Y_GAP, BUTTON_WIDTH, BUTTON_HEIGHT, UNSELECT_COLOR);
+	draw_button("High Scores", BUTTON_X, BUTTON_Y_START + 2*BUTTON_Y_GAP, BUTTON_WIDTH, BUTTON_HEIGHT, UNSELECT_COLOR);
+	draw_button("Exit", BUTTON_X, BUTTON_Y_START + 3*BUTTON_Y_GAP, BUTTON_WIDTH, BUTTON_HEIGHT, UNSELECT_COLOR);
 
 	/* Main CPU cycle */
 	while(1)
