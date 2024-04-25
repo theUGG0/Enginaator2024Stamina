@@ -43,8 +43,8 @@
 
 
 #define MAX_SNAKE_LENGTH 100
-#define GRID_WIDTH 8
-#define GRID_HEIGHT 8
+#define GRID_WIDTH 20
+#define GRID_HEIGHT 20
 
 /*
 **====================================================================================
@@ -103,6 +103,7 @@ Private void snakeDie(void);
 Private void snakeCollision(void);
 Private void drawBackground(void);
 Private void drawSnakeGame(void);
+Private void foodSpawn(void);
 
 /*
 **====================================================================================
@@ -113,10 +114,11 @@ Private void drawSnakeGame(void);
 uint16_t * priv_frame_buffer;
 Private struct Snake snake = {
 	.body = {{0, 0}},
-	.length = 1,
+	.length = 2,
 	.direction = RIGHT
 };
 uint16_t * priv_snake_buffer;
+uint16_t * priv_food_buffer;
 
 enum ScreenState currentScreen = SCREEN_GAME;
 
@@ -267,12 +269,18 @@ Private void drawBmpInFrameBuf(int xPos, int yPos, int width, int height, uint16
 Private void drawSnakeGame(void) {
 	// Draw the background
 	drawBackground();
+	
+	// check for snake collision
+	snakeCollision();
 
 	// Draw the snake
 	drawSnake();
 
+	foodSpawn();
+
 	// Flush the frame buffer
 	display_drawScreenBuffer(priv_frame_buffer);
+
 }
 
 Private void drawBackground(void) {
@@ -280,11 +288,9 @@ Private void drawBackground(void) {
 	drawRectangleInFrameBuf(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, COLOR_ORANGE);
 }
 Private void drawSnake(void) {
-	// check for snake collision
-	snakeCollision();
 
     // Clear previous snake position
-	drawRectangleInFrameBuf(snake.body[snake.length - 1].x, snake.body[snake.length - 1].y, GRID_WIDTH, GRID_HEIGHT, COLOR_WHITE);
+/* 	drawRectangleInFrameBuf(snake.body[snake.length - 1].x, snake.body[snake.length - 1].y, GRID_WIDTH, GRID_HEIGHT, COLOR_WHITE); */
 
     // Update snake position
 	for (int i = snake.length - 1; i > 0; i--) {
@@ -306,10 +312,46 @@ Private void drawSnake(void) {
     for (int i = 0; i < snake.length; i++) {
         drawBmpInFrameBuf(snake.body[i].x, snake.body[i].y, GRID_WIDTH, GRID_HEIGHT, priv_snake_buffer);
     }
-
-    // Flush the frame buffer
-    display_drawScreenBuffer(priv_frame_buffer);
 }
+
+Private void foodSpawn(void) {
+	//food random position
+    Food.x = rand() % (DISPLAY_WIDTH - GRID_WIDTH);
+    Food.y = rand() % (DISPLAY_HEIGHT - GRID_HEIGHT);
+
+    // Select a random food type
+    int randomFoodType = rand() % 6;
+
+    // Get the file path for the selected food type
+    const char* foodFilePath;
+    switch (randomFoodType) {
+        case 1:
+            foodFilePath = "/images/apple.bmp";
+            break;
+        case 2:
+            foodFilePath = "/images/cherry.bmp";
+            break;
+        case 3:
+            foodFilePath = "/images/grapes.bmp";
+            break;
+		case 4:
+			foodFilePath = "/images/pineapple.bmp";
+			break;
+		case 5:
+			foodFilePath = "/images/tomato.bmp";
+			break;
+		case 6:
+			foodFilePath = "/images/watermelon.bmp";
+			break;
+    }
+
+	priv_snake_buffer = heap_caps_malloc(GRID_HEIGHT * GRID_WIDTH * sizeof(uint16_t), MALLOC_CAP_DMA);
+	assert(priv_snake_buffer);
+	sdCard_Read_bmp_file(foodFilePath, priv_snake_buffer);
+
+	drawBmpInFrameBuf(food.x, food.y, GRID_WIDTH, GRID_HEIGHT, priv_food_buffer);
+}
+
 Private void snakeEat(void) {
 	// Increase the length of the snake
 	snake.length += 1;
@@ -341,46 +383,4 @@ Private void snakeCollision(void) {
 		}
 	}
 }
-
-
-
-/* Private void foodSpawn(void) {
-	// Generate a random position for the food
-	food.x = rand() % (DISPLAY_WIDTH - GRID_WIDTH);
-	food.y = rand() % (DISPLAY_HEIGHT - GRID_HEIGHT);
-
-	// Draw the food
-	drawBmpInFrameBuf(food.x, food.y, GRID_WIDTH, GRID_HEIGHT, priv_food_buffer);
-} */
-
-
-#ifdef GHOST_TEST
-Private void drawGhost(void)
-{
-	/* Here we draw the whole screen buffer every time. Note that this is not necessarily the most optimal solution, since it takes a lot
-	 * of time to redraw the whole screen */
-
-	/* Update cube position */
-	ghost_position += ghost_direction;
-
-	if(ghost_position <= 0)
-	{
-		ghost_direction = GHOST_SPEED;
-	}
-
-	if(ghost_position >= (DISPLAY_WIDTH - 64))
-	{
-		ghost_direction = 0 - GHOST_SPEED;
-	}
-
-	/* Here we draw the data onto an internal buffer and then pass the whole buffer on to the display driver. */
-	/* 1. Draw the background in the buffer */
-	drawRectangleInFrameBuf(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, COLOR_WHITE);
-	/* 2. Draw the ghost bitmap in the buffer */
-	drawBmpInFrameBuf(ghost_position, 88, 64, 64, priv_ghost_buffer);
-
-	/* 3. Flush the frame buffer. */
-	display_drawScreenBuffer(priv_frame_buffer);
-}
-#endif
 
