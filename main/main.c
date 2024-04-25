@@ -46,6 +46,11 @@
 #define GRID_WIDTH 8
 #define GRID_HEIGHT 8
 
+#define MENU_OPTION_COUNT 3
+#define MENU_OPTION_HEIGHT 30
+#define MENU_OPTION_WIDTH 100
+#define MENU_OPTION_MARGIN 10
+
 /*
 **====================================================================================
 ** Private macro definitions
@@ -70,6 +75,15 @@
 		LEFT,
 		RIGHT
 	};
+	
+	typedef enum {
+		START_GAME,
+		SETTINGS,
+		HIGH_SCORES
+	} MenuOption;
+
+	int selectedOption = 1;
+	
 	struct SnakeSegment
 	{
 		int x;
@@ -103,7 +117,8 @@ Private void snakeDie(void);
 Private void snakeCollision(void);
 Private void drawBackground(void);
 Private void drawSnakeGame(void);
-
+Private void drawMainMenu(void);
+/* Private void drawMenuOption(option, 50, startY + i * (MENU_OPTION_HEIGHT + MENU_OPTION_MARGIN), i == selectedOption); */
 /*
 **====================================================================================
 ** Private variable declarations
@@ -118,7 +133,7 @@ Private struct Snake snake = {
 };
 uint16_t * priv_snake_buffer;
 
-enum ScreenState currentScreen = SCREEN_GAME;
+enum ScreenState currentScreen = SCREEN_MAIN_MENU;
 
 /*
 **====================================================================================
@@ -185,7 +200,7 @@ void app_main(void)
 
 		switch (currentScreen) {
         case SCREEN_MAIN_MENU:
-/*             updateMainMenuScreen(); */
+             drawMainMenu();
             break;
         case SCREEN_GAME:
             drawSnakeGame();
@@ -262,6 +277,45 @@ Private void drawBmpInFrameBuf(int xPos, int yPos, int width, int height, uint16
 			data_ptr++;
 		}
 	}
+}
+
+
+Private void drawMenuOption(MenuOption option, int x, int y, int selected){
+	char* text;
+	switch(option){
+		case START_GAME:
+			text = "Start Game";
+			break;
+		case SETTINGS:
+			text = "Settings";
+			break;
+		case HIGH_SCORES:
+			text = "High scores";
+			break;
+	}
+	//draw the option button background
+    display_fillRect(x, y, MENU_OPTION_WIDTH, MENU_OPTION_HEIGHT, selected ? COLOR_YELLOW : COLOR_WHITE);
+
+    //draw option button text
+    display_setTextSize(2);
+    display_setTextColor(selected ? COLOR_BLACK : COLOR_BLUE, selected ? COLOR_YELLOW : COLOR_WHITE);
+    display_setCursor(x + MENU_OPTION_MARGIN, y + MENU_OPTION_MARGIN);
+    display_print(text);
+}
+
+Private void drawMainMenu(void) {
+	// Draw the background
+	drawBackground();
+
+	// Flush the frame buffer
+	display_drawScreenBuffer(priv_frame_buffer);
+
+	// Draw the menu options
+    int startY = 50;
+    for (int i = 0; i < MENU_OPTION_COUNT; i++) {
+        MenuOption option = (MenuOption)i;
+        drawMenuOption(option, 50, startY + i * (MENU_OPTION_HEIGHT + MENU_OPTION_MARGIN), i == selectedOption);
+    }
 }
 
 Private void drawSnakeGame(void) {
@@ -352,35 +406,3 @@ Private void snakeCollision(void) {
 	// Draw the food
 	drawBmpInFrameBuf(food.x, food.y, GRID_WIDTH, GRID_HEIGHT, priv_food_buffer);
 } */
-
-
-#ifdef GHOST_TEST
-Private void drawGhost(void)
-{
-	/* Here we draw the whole screen buffer every time. Note that this is not necessarily the most optimal solution, since it takes a lot
-	 * of time to redraw the whole screen */
-
-	/* Update cube position */
-	ghost_position += ghost_direction;
-
-	if(ghost_position <= 0)
-	{
-		ghost_direction = GHOST_SPEED;
-	}
-
-	if(ghost_position >= (DISPLAY_WIDTH - 64))
-	{
-		ghost_direction = 0 - GHOST_SPEED;
-	}
-
-	/* Here we draw the data onto an internal buffer and then pass the whole buffer on to the display driver. */
-	/* 1. Draw the background in the buffer */
-	drawRectangleInFrameBuf(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, COLOR_WHITE);
-	/* 2. Draw the ghost bitmap in the buffer */
-	drawBmpInFrameBuf(ghost_position, 88, 64, 64, priv_ghost_buffer);
-
-	/* 3. Flush the frame buffer. */
-	display_drawScreenBuffer(priv_frame_buffer);
-}
-#endif
-
