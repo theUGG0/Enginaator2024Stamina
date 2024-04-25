@@ -30,9 +30,9 @@
 
 #define LCD_HOST    SPI2_HOST
 
-#define PIN_NUM_DC         5
-#define PIN_NUM_RST        3
-#define PIN_NUM_DISPLAY_CS 4
+#define PIN_NUM_DC         7
+#define PIN_NUM_RST        15
+#define PIN_NUM_DISPLAY_CS 6
 #define PIN_NUM_BCKL       2
 
 /*

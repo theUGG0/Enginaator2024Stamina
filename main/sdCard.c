@@ -15,7 +15,7 @@
 #include "display.h"
 
 #define MOUNT_POINT "/sdcard"
-#define PIN_NUM_SDCARD_CS    7
+#define PIN_NUM_SDCARD_CS    16
 
 
 /****************** Private type definitions *******************/
@@ -113,18 +113,19 @@ void sdCard_Read_bmp_file(const char *path, uint16_t * output_buffer)
 
 	read_bmp_file(str, output_buffer);
 }
-void sdCard_Read_text_file(const char *path, char * output_buffer)
+/* void sdCard_Read_text_file(const char *path, char * output_buffer)
 {
     char str[64] = MOUNT_POINT;
     strcat(str, path);
 
     read_text_file(str, output_buffer);
-}
+} */
 
 /*********** Private functions ***********/
 
-static esp_err_t read_text_file(const char *path, char * output_buffer)
+/* static esp_err_t read_text_file(const char *path, char * output_buffer)
 {
+    BMPHeader header;
     FILE *f;
     ESP_LOGI(TAG, "Reading file %s", path);
     f = fopen(path, "r");
@@ -139,7 +140,7 @@ static esp_err_t read_text_file(const char *path, char * output_buffer)
     fclose(f);
 
     return ESP_OK;
-}
+} */
 
 static esp_err_t read_bmp_file(const char *path, uint16_t * output_buffer)
 {

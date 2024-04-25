@@ -40,7 +40,12 @@
 /* Additionally GND and 3.3V need to be connected to the GND and VCC pins on the display board respectively. */
 
 /* Uncomment this to enable the ghost bitmap test. */
-// #define GHOST_TEST
+/* #define GHOST_TEST */
+
+
+#define MAX_SNAKE_LENGTH 100
+#define GRID_WIDTH 8
+#define GRID_HEIGHT 8
 
 /*
 **====================================================================================
@@ -55,7 +60,7 @@
 ** Private type definitions
 **====================================================================================
 */
-	enum direction {
+	enum Direction {
 		UP,
 		DOWN,
 		LEFT,
@@ -67,11 +72,15 @@
 		int y;
 	};
 	struct Snake{
-		struct SnakeSegment segments[MAX_SNAKE_LENGTH];
+		struct SnakeSegment body[MAX_SNAKE_LENGTH];
 		int length;
 		enum Direction direction;
 	};
-
+	struct Food
+	{
+		int x;
+		int y;
+	};
 /*
 **====================================================================================
 ** Private function forward declarations
@@ -86,6 +95,9 @@ Private void drawGhost(void);
 #endif
 Private void drawSnake(void);
 Private void snakeEat(void);
+Private void snakeDie(void);
+Private void snakeCollision(void);
+Private void drawBackground(void);
 
 /*
 **====================================================================================
@@ -100,12 +112,8 @@ uint16_t * priv_ghost_buffer;
 Private int ghost_position = 0;
 Private int ghost_direction = GHOST_SPEED;
 #endif
-
-#define MAX_SNAKE_LENGTH 100
-#define SNAKE_WIDTH 8
-#define SNAKE_HEIGHT 8
 Private struct Snake snake = {
-	.segments = {{0, 0}},
+	.body = {{0, 0}},
 	.length = 1,
 	.direction = RIGHT
 };
@@ -150,21 +158,21 @@ void app_main(void)
 		display_init();
 		sdCard_init();
 
-		display_fillRectangle(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, COLOR_ORANGE);
+ 		display_fillRectangle(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, COLOR_ORANGE);
 		vTaskDelay(1000u / portTICK_PERIOD_MS);
 
 		/* Load an image from the SD Card into the frame buffer */
-		sdCard_Read_bmp_file("/logo.bmp", priv_frame_buffer);
+/* 		sdCard_Read_bmp_file("/logo.bmp", priv_frame_buffer);
 
 
-		display_drawBitmap(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, priv_frame_buffer);
+		display_drawBitmap(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, priv_frame_buffer); */
 	}
 
 	/* Five second delay... */
 	vTaskDelay(5000u / portTICK_PERIOD_MS);
 	
 	// load snake image
-	priv_snake_buffer = heap_caps_malloc(SNAKE_WIDTH * SNAKE_HEIGHT * sizeof(uint16_t), MALLOC_CAP_DMA);
+	priv_snake_buffer = heap_caps_malloc(64 * 64 * sizeof(uint16_t), MALLOC_CAP_DMA);
 	assert(priv_snake_buffer);
 	sdCard_Read_bmp_file("/ghost.bmp", priv_snake_buffer); //USES GHOST.BMP FOR NOW
 
@@ -208,6 +216,8 @@ void app_main(void)
 		/* Simple test for drawing a moving bitmap on the screen. */
 		drawGhost();
 #endif
+		printf("Snake pos x: %d\n", snake.body[0].x);
+ 		drawBackground();
 		drawSnake();
 	}
 }
@@ -275,10 +285,16 @@ Private void drawBmpInFrameBuf(int xPos, int yPos, int width, int height, uint16
 		}
 	}
 }
-
+Private void drawBackground(void) {
+	// Draw the background
+	drawRectangleInFrameBuf(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, COLOR_ORANGE);
+}
 Private void drawSnake(void) {
+	// check for snake collision
+	snakeCollision();
+
     // Clear previous snake position
-	drawRectangleInFrameBuf(snake.body[snake.length - 1].x, snake.body[snake.length - 1].y, SNAKE_WIDTH, SNAKE_HEIGHT, COLOR_WHITE);
+	drawRectangleInFrameBuf(snake.body[snake.length - 1].x, snake.body[snake.length - 1].y, GRID_WIDTH, GRID_HEIGHT, COLOR_WHITE);
 
     // Update snake position
 	for (int i = snake.length - 1; i > 0; i--) {
@@ -286,19 +302,19 @@ Private void drawSnake(void) {
 		snake.body[i].y = snake.body[i - 1].y;
 	}
 
-    if (snake_direction == RIGHT) {
+    if (snake.direction == RIGHT) {
         snake.body[0].x += 1;
-    } else if (snake_direction == DOWN) {
+    } else if (snake.direction == DOWN) {
         snake.body[0].y += 1;
-    } else if (snake_direction == LEFT) {
+    } else if (snake.direction == LEFT) {
         snake.body[0].x -= 1;
-    } else if (snake_direction == UP) {
+    } else if (snake.direction == UP) {
         snake.body[0].y -= 1;
     }
 
     // Draw the snake at its new position
     for (int i = 0; i < snake.length; i++) {
-        drawBmpInFrameBuf(snake.body[i].x, snake.body[i].y, SNAKE_WIDTH, SNAKE_HEIGHT, priv_snake_buffer);
+        drawBmpInFrameBuf(snake.body[i].x, snake.body[i].y, GRID_WIDTH, GRID_HEIGHT, priv_snake_buffer);
     }
 
     // Flush the frame buffer
@@ -312,6 +328,40 @@ Private void snakeEat(void) {
 	snake.body[snake.length - 1].x = snake.body[snake.length - 2].x;
 	snake.body[snake.length - 1].y = snake.body[snake.length - 2].y;
 }
+
+Private void snakeDie(void) {
+	// Reset the snake
+	snake.length = 1;
+	snake.body[0].x = 0;
+	snake.body[0].y = 0;
+	snake.direction = RIGHT;
+	printf("Snake died\n");
+}
+
+Private void snakeCollision(void) {
+	// Check if the snake has collided with the walls
+	if (snake.body[0].x < 0 || snake.body[0].x >= DISPLAY_WIDTH || snake.body[0].y < 0 || snake.body[0].y >= DISPLAY_HEIGHT) {
+		snakeDie();
+	}
+
+	// Check if the snake has collided with itself
+	for (int i = 1; i < snake.length; i++) {
+		if (snake.body[0].x == snake.body[i].x && snake.body[0].y == snake.body[i].y) {
+			snakeDie();
+		}
+	}
+}
+
+
+
+/* Private void foodSpawn(void) {
+	// Generate a random position for the food
+	food.x = rand() % (DISPLAY_WIDTH - GRID_WIDTH);
+	food.y = rand() % (DISPLAY_HEIGHT - GRID_HEIGHT);
+
+	// Draw the food
+	drawBmpInFrameBuf(food.x, food.y, GRID_WIDTH, GRID_HEIGHT, priv_food_buffer);
+} */
 
 
 #ifdef GHOST_TEST
