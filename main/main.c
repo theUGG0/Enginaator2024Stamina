@@ -294,13 +294,15 @@ Private void drawMenuOption(MenuOption option, int x, int y, int selected){
 			break;
 	}
 	//draw the option button background
-    display_fillRect(x, y, MENU_OPTION_WIDTH, MENU_OPTION_HEIGHT, selected ? COLOR_YELLOW : COLOR_WHITE);
+/*     display_fillRectangle(x, y, MENU_OPTION_WIDTH, MENU_OPTION_HEIGHT, selected ? COLOR_YELLOW : COLOR_WHITE); */
+	display_fillRectangle(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, COLOR_ORANGE);
 
     //draw option button text
-    display_setTextSize(2);
+	TFT_print("mjau");
+/*     display_setTextSize(2);
     display_setTextColor(selected ? COLOR_BLACK : COLOR_BLUE, selected ? COLOR_YELLOW : COLOR_WHITE);
     display_setCursor(x + MENU_OPTION_MARGIN, y + MENU_OPTION_MARGIN);
-    display_print(text);
+    display_print(text); */
 }
 
 Private void drawMainMenu(void) {
