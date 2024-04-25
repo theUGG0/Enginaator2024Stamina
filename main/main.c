@@ -39,7 +39,7 @@
 /* Additionally GND and 3.3V need to be connected to the GND and VCC pins on the display board respectively. */
 
 /* Uncomment this to enable the ghost bitmap test. */
-#define GHOST_TEST
+// #define GHOST_TEST
 
 /*
 **====================================================================================
@@ -54,7 +54,22 @@
 ** Private type definitions
 **====================================================================================
 */
-
+	enum direction {
+		UP,
+		DOWN,
+		LEFT,
+		RIGHT
+	};
+	struct SnakeSegment
+	{
+		int x;
+		int y;
+	};
+	struct Snake{
+		struct SnakeSegment segments[MAX_SNAKE_LENGTH];
+		int length;
+		enum Direction direction;
+	};
 /*
 **====================================================================================
 ** Private function forward declarations
@@ -67,6 +82,8 @@ Private void drawBmpInFrameBuf(int xPos, int yPos, int width, int height, uint16
 #ifdef GHOST_TEST
 Private void drawGhost(void);
 #endif
+Private void drawSnake(void);
+Private void snakeEat(void);
 
 /*
 **====================================================================================
@@ -81,6 +98,16 @@ uint16_t * priv_ghost_buffer;
 Private int ghost_position = 0;
 Private int ghost_direction = GHOST_SPEED;
 #endif
+
+#define MAX_SNAKE_LENGTH 100
+#define SNAKE_WIDTH 8
+#define SNAKE_HEIGHT 8
+Private struct Snake snake = {
+	.segments = {{0, 0}},
+	.length = 1,
+	.direction = RIGHT
+};
+uint16_t * priv_snake_buffer;
 
 /*
 **====================================================================================
@@ -115,11 +142,17 @@ void app_main(void)
 		/* Load an image from the SD Card into the frame buffer */
 		sdCard_Read_bmp_file("/logo.bmp", priv_frame_buffer);
 
+
 		display_drawBitmap(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, priv_frame_buffer);
 	}
 
 	/* Five second delay... */
 	vTaskDelay(5000u / portTICK_PERIOD_MS);
+	
+	// load snake image
+	priv_snake_buffer = heap_caps_malloc(SNAKE_WIDTH * SNAKE_HEIGHT * sizeof(uint16_t), MALLOC_CAP_DMA);
+	assert(priv_snake_buffer);
+	sdCard_Read_bmp_file("/ghost.bmp", priv_snake_buffer); //USES GHOST.BMP FOR NOW
 
 #ifdef GHOST_TEST
 	priv_ghost_buffer = heap_caps_malloc(64*64*sizeof(uint16_t), MALLOC_CAP_DMA);
@@ -143,6 +176,7 @@ void app_main(void)
 		/* Simple test for drawing a moving bitmap on the screen. */
 		drawGhost();
 #endif
+		drawSnake();
 	}
 }
 
@@ -209,6 +243,44 @@ Private void drawBmpInFrameBuf(int xPos, int yPos, int width, int height, uint16
 		}
 	}
 }
+
+Private void drawSnake(void) {
+    // Clear previous snake position
+	drawRectangleInFrameBuf(snake.body[snake.length - 1].x, snake.body[snake.length - 1].y, SNAKE_WIDTH, SNAKE_HEIGHT, COLOR_WHITE);
+
+    // Update snake position
+	for (int i = snake.length - 1; i > 0; i--) {
+		snake.body[i].x = snake.body[i - 1].x;
+		snake.body[i].y = snake.body[i - 1].y;
+	}
+
+    if (snake_direction == RIGHT) {
+        snake.body[0].x += 1;
+    } else if (snake_direction == DOWN) {
+        snake.body[0].y += 1;
+    } else if (snake_direction == LEFT) {
+        snake.body[0].x -= 1;
+    } else if (snake_direction == UP) {
+        snake.body[0].y -= 1;
+    }
+
+    // Draw the snake at its new position
+    for (int i = 0; i < snake.length; i++) {
+        drawBmpInFrameBuf(snake.body[i].x, snake.body[i].y, SNAKE_WIDTH, SNAKE_HEIGHT, priv_snake_buffer);
+    }
+
+    // Flush the frame buffer
+    display_drawScreenBuffer(priv_frame_buffer);
+}
+Private void snakeEat(void) {
+	// Increase the length of the snake
+	snake.length += 1;
+
+	// Add a new segment to the snake
+	snake.body[snake.length - 1].x = snake.body[snake.length - 2].x;
+	snake.body[snake.length - 1].y = snake.body[snake.length - 2].y;
+}
+
 
 #ifdef GHOST_TEST
 Private void drawGhost(void)

@@ -113,9 +113,33 @@ void sdCard_Read_bmp_file(const char *path, uint16_t * output_buffer)
 
 	read_bmp_file(str, output_buffer);
 }
+void sdCard_Read_text_file(const char *path, char * output_buffer)
+{
+    char str[64] = MOUNT_POINT;
+    strcat(str, path);
+
+    read_text_file(str, output_buffer);
+}
 
 /*********** Private functions ***********/
 
+static esp_err_t read_text_file(const char *path, char * output_buffer)
+{
+    FILE *f;
+    ESP_LOGI(TAG, "Reading file %s", path);
+    f = fopen(path, "r");
+
+    if (f == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to open file for reading");
+        return ESP_FAIL;
+    }
+
+    fread(output_buffer, sizeof(char), 64, f);
+    fclose(f);
+
+    return ESP_OK;
+}
 
 static esp_err_t read_bmp_file(const char *path, uint16_t * output_buffer)
 {
