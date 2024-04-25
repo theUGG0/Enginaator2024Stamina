@@ -16,6 +16,7 @@
 /* The SD card functionality has been moved to its own separate file for this project. */
 #include "sdCard.h"
 
+
 /*
 **====================================================================================
 ** Private constant definitions
@@ -118,6 +119,18 @@ Private struct Snake snake = {
 };
 uint16_t * priv_snake_buffer;
 
+//main menu
+
+
+#define BUTTON_WIDTH 100
+#define BUTTON_HEIGHT 20
+#define BUTTON_X 20
+#define BUTTON_Y_START 100
+#define BUTTON_Y_GAP 20
+
+#define SELECT_COLOR	COLOR_RED
+#define UNSELECT_COLOR	COLOR_WHITE
+
 /*
 **====================================================================================
 ** Public function definitions
@@ -176,6 +189,24 @@ void app_main(void)
 	TickType_t xLastWakeTime;
 	const TickType_t xFrequency = 40u / portTICK_PERIOD_MS;
 	xLastWakeTime = xTaskGetTickCount ();
+
+	//MAIN MENU
+	//init display
+	ili9341_init(DISPLAY_WIDTH, DISPLAY_HEIGHT);
+
+	//fill screen with black
+	ili9341_fill_screen(COLOR_BLACK);
+
+	//set text color
+	ili9341_set_text_color(COLOR_WHITE, COLOR_BLACK);
+
+	//display menu
+	ili9341_draw_string(40, 50, "Main Menu", 2);
+
+	draw_button("Start Game", BUTTON_X, BUTTON_Y_START, BUTTON_WIDTH, BUTTON_HEIGHT, SELECT_COLOR);
+	draw_button("Settings", BUTTON_X, BUTTON_Y_START + BUTTON_Y_GAP, BUTTON_WIDTH, BUTTON_HEIGHT, UNSELECT_COLOR);
+	draw_button("High Scores", BUTTON_X, BUTTON_Y_START + 2*BUTTON_Y_GAP, BUTTON_WIDTH, BUTTON_HEIGHT, UNSELECT_COLOR);
+	draw_button("Exit", BUTTON_X, BUTTON_Y_START + 3*BUTTON_Y_GAP, BUTTON_WIDTH, BUTTON_HEIGHT, UNSELECT_COLOR);
 
 	/* Main CPU cycle */
 	while(1)
