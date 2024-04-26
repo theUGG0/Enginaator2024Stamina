@@ -294,8 +294,8 @@ Private void drawMenuOption(MenuOption option, int x, int y, int selected){
 			break;
 	}
 	//draw the option button background
-/*     display_fillRectangle(x, y, MENU_OPTION_WIDTH, MENU_OPTION_HEIGHT, selected ? COLOR_YELLOW : COLOR_WHITE); */
-	display_fillRectangle(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, COLOR_ORANGE);
+/*     display_fillRectangle(x, y, MENU_OPTION_WIDTH, MENU_OPTION_HEIGHT, selected ? COLOR_WHITE : COLOR_RED); */
+	display_fillRectangle(x, y, MENU_OPTION_WIDTH, MENU_OPTION_HEIGHT, COLOR_RED);
 
     //draw option button text
 	TFT_print("mjau");
