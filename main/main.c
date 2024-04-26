@@ -154,7 +154,7 @@ uint16_t * priv_settings_buffer;
 uint16_t * priv_settingsbtn_buffer;
 int level = 1;
 int option = 1;
-int selectedMenuBtn = 4;
+int selectedMenuBtn = 1;
 int gameSpeed = 1;
 struct Food food;
 
@@ -207,9 +207,6 @@ void app_main(void)
 
 		display_drawBitmap(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, priv_frame_buffer); */
 	}
-
-	/* Five second delay... */
-	vTaskDelay(5000u / portTICK_PERIOD_MS);
 	
 
 
@@ -362,16 +359,16 @@ Private void changeMenuSelection(int selectedMenuBtn) {
 	const char* optionsbtnpath = "/images/options.bmp";
 
 
-	if (selectedMenuBtn == 4){
+	if (selectedMenuBtn == 1){
 
 	    printf("Drawing menu btn 1...\n");
 		level1path = "/images/lvl1h.bmp";
-	} else if (selectedMenuBtn == 3){
-		level2path = "/images/lvl2h.bmp";
 	} else if (selectedMenuBtn == 2){
+		level2path = "/images/lvl2h.bmp";
+	} else if (selectedMenuBtn == 3){
 		level3path = "/images/lvl3h.bmp";
 	}
-	else if (selectedMenuBtn == 1){
+	else if (selectedMenuBtn == 4){
 		optionsbtnpath = "/images/optionsh.bmp";
 	}
 
@@ -478,8 +475,6 @@ Private void updateOptionSelection(int option) {
 
 Private void optionsLoop(void) {
 
-	drawOptions();
-
 	struct intTriple returnValues = handleInputs();
 	int joystick_x = returnValues.a;
 	int joystick_y = returnValues.b;
@@ -494,6 +489,8 @@ Private void optionsLoop(void) {
 	if (joystick_btn == 1) {
 		currentScreen = SCREEN_MAIN_MENU;
 	}
+
+	drawOptions();
 }
 
 Private void drawBackground(void) {
@@ -636,4 +633,3 @@ Private void snakeCollision(void) {
 		printf("Snake eat\n");
 	}
 }
-
