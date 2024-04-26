@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include "driver/spi_master.h"
+#include "driver/gpio.h"
 
 #include "esp_task_wdt.h"
 
@@ -85,6 +86,7 @@ static esp_adc_cal_characteristics_t adc1_chars;
 		struct SnakeSegment body[MAX_SNAKE_LENGTH];
 		int length;
 		enum Direction direction;
+		int status;
 	};
 	struct Food
 	{
@@ -119,6 +121,11 @@ Private void menuLoop(void);
 Private void initLevel(void);
 Private void drawMenu(void);
 Private void optionsLoop(void);
+Private void drawOptions(void);
+Private void changeMenuSelection(int selectedMenuBtn);
+Private void updateOptionSelection(int option);
+Private void updateSnakePosition(void);
+
 Private struct intTriple handleInputs(void);
 
 Private void drawEnginaator(void);
@@ -133,7 +140,8 @@ uint16_t * priv_frame_buffer;
 Private struct Snake snake = {
 	.body = {{0, 0}},
 	.length = 2,
-	.direction = RIGHT
+	.direction = RIGHT,
+	.status = 0
 };
 uint16_t * priv_snake_buffer;
 uint16_t * priv_snake_body_buffer;
@@ -143,13 +151,14 @@ uint16_t * priv_levelselect1_buffer;
 uint16_t * priv_levelselect2_buffer;
 uint16_t * priv_levelselect3_buffer;
 uint16_t * priv_settings_buffer;
+uint16_t * priv_settingsbtn_buffer;
 int level = 1;
 int option = 1;
-int selectedMenuBtn = 1;
+int selectedMenuBtn = 4;
 int gameSpeed = 1;
 struct Food food;
 
-enum ScreenState currentScreen = SCREEN_GAME;
+enum ScreenState currentScreen = SCREEN_MAIN_MENU;
 
 /*
 **====================================================================================
@@ -180,6 +189,8 @@ void app_main(void)
 
  		display_fillRectangle(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, COLOR_ORANGE);
 		vTaskDelay(1000u / portTICK_PERIOD_MS);
+
+		changeMenuSelection(1);
 
 		// load snake image
 		priv_snake_buffer = heap_caps_malloc(20 * 20 * sizeof(uint16_t), MALLOC_CAP_DMA);
@@ -223,7 +234,7 @@ void app_main(void)
         	gameLoop();
             break;
         case SCREEN_SETTINGS:
-/*             updateSettingsScreen(); */
+			optionsLoop();
             break;
 		}
 
@@ -301,13 +312,15 @@ Private void drawBmpInFrameBuf(int xPos, int yPos, int width, int height, uint16
 Private void drawSnakeGame(void) {
 	// Draw the background
 	drawBackground();
-	
+	updateSnakePosition();
 	// check for snake collision
 	snakeCollision();
-
+	if (snake.status != 1) {
+		return;
+	}
 	// Draw the snake
-	drawSnake();
 	drawFood();
+	drawSnake();
 
 
 	// Flush the frame buffer
@@ -317,59 +330,73 @@ Private void drawSnakeGame(void) {
 }
 
 Private void drawMenu(void){
+
+    printf("Drawing menu...\n");
+
 	// Draw the background
 	drawBackground();
-	
-	const char* level1path = "/images/lvl1.bmp";
-	const char* level2path = "/images/lvl2.bmp";
-	const char* level3path = "/images/lvl3.bmp";
-	const char* optionspath = "/images/options.bmp";
 
-
-	if (selectedMenuBtn == 1){
-		drawBmpInFrameBuf((DISPLAY_WIDTH/3)-100/3, 50, 100, 20, priv_levelselect1_buffer);
-		const char* level1path = "/images/lvl1h.bmp";
-	} else if (selectedMenuBtn == 2){
-		drawBmpInFrameBuf((DISPLAY_WIDTH/3)-100/3, 50, 100, 20, priv_levelselect2_buffer);
-		const char* level2path = "/images/lvl2h.bmp";
-	} else if (selectedMenuBtn == 3){
-		drawBmpInFrameBuf((DISPLAY_WIDTH/3)-100/3, 50, 100, 20, priv_levelselect3_buffer);
-		const char* level3path = "/images/lvl3h.bmp";
-	}
-	else if (selectedMenuBtn == 4){
-		drawBmpInFrameBuf((DISPLAY_WIDTH/3)-100/3, 50, 100, 20, priv_settings_buffer);
-		const char* optionspath = "/images/optionsh.bmp";
-	}
-
-	
-	priv_levelselect1_buffer = heap_caps_malloc(100 * 20 * sizeof(uint16_t), MALLOC_CAP_DMA);
-	assert(priv_levelselect1_buffer);
-	sdCard_Read_bmp_file(level1path, priv_levelselect1_buffer);
-
-	priv_levelselect2_buffer = heap_caps_malloc(100 * 20 * sizeof(uint16_t), MALLOC_CAP_DMA);
-	assert(priv_levelselect2_buffer);
-	sdCard_Read_bmp_file(level2path, priv_levelselect2_buffer);
-
-	priv_levelselect3_buffer = heap_caps_malloc(100 * 20 * sizeof(uint16_t), MALLOC_CAP_DMA);
-	assert(priv_levelselect3_buffer);
-	sdCard_Read_bmp_file(level3path, priv_levelselect3_buffer);
-
-	drawBmpInFrameBuf((DISPLAY_WIDTH/3)-100/3, 50, 100, 20, priv_levelselect1_buffer);
-	drawBmpInFrameBuf((DISPLAY_WIDTH/3)-100/3, 50, 100, 20, priv_levelselect2_buffer);
-	drawBmpInFrameBuf((DISPLAY_WIDTH/3)-100/3, 50, 100, 20, priv_levelselect3_buffer);
-
-	priv_snake_body_buffer = heap_caps_malloc(20 * 20 * sizeof(uint16_t), MALLOC_CAP_DMA);
-	assert(priv_snake_body_buffer);
-	sdCard_Read_bmp_file("/images/snake_body.bmp", priv_snake_body_buffer);
+    printf("Drawing menu butoons\n");
+	drawBmpInFrameBuf(50, 50, 100, 40, priv_levelselect1_buffer);
+	drawBmpInFrameBuf(150, 50, 100, 40, priv_levelselect2_buffer);
+	drawBmpInFrameBuf(50, 100, 100, 40, priv_levelselect3_buffer);
+	drawBmpInFrameBuf(150, 100, 100, 40, priv_settingsbtn_buffer);
 
 	
 	display_drawScreenBuffer(priv_frame_buffer);
 }
 
+Private void drawOptions(void){
+
+	// Draw the background
+
+	drawBmpInFrameBuf(100, 50, 100, 40, priv_settings_buffer);
+	
+	display_drawScreenBuffer(priv_frame_buffer);
+}
+
+Private void changeMenuSelection(int selectedMenuBtn) {
+	const char* level1path = "/images/lvl1.bmp";
+	const char* level2path = "/images/lvl2.bmp";
+	const char* level3path = "/images/lvl3.bmp";
+	const char* optionsbtnpath = "/images/options.bmp";
+
+
+	if (selectedMenuBtn == 4){
+
+	    printf("Drawing menu btn 1...\n");
+		level1path = "/images/lvl1h.bmp";
+	} else if (selectedMenuBtn == 3){
+		level2path = "/images/lvl2h.bmp";
+	} else if (selectedMenuBtn == 2){
+		level3path = "/images/lvl3h.bmp";
+	}
+	else if (selectedMenuBtn == 1){
+		optionsbtnpath = "/images/optionsh.bmp";
+	}
+
+	
+	priv_levelselect1_buffer = heap_caps_malloc(100 * 40 * sizeof(uint16_t), MALLOC_CAP_DMA);
+	assert(priv_levelselect1_buffer);
+	sdCard_Read_bmp_file(level1path, priv_levelselect1_buffer);
+
+	priv_levelselect2_buffer = heap_caps_malloc(100 * 40 * sizeof(uint16_t), MALLOC_CAP_DMA);
+	assert(priv_levelselect2_buffer);
+	sdCard_Read_bmp_file(level2path, priv_levelselect2_buffer);
+
+	priv_levelselect3_buffer = heap_caps_malloc(100 * 40 * sizeof(uint16_t), MALLOC_CAP_DMA);
+	assert(priv_levelselect3_buffer);
+	sdCard_Read_bmp_file(level3path, priv_levelselect3_buffer);
+
+	priv_settingsbtn_buffer = heap_caps_malloc(100 * 40 * sizeof(uint16_t), MALLOC_CAP_DMA);
+	assert(priv_settingsbtn_buffer);
+	sdCard_Read_bmp_file(optionsbtnpath, priv_settingsbtn_buffer);
+}
+
 Private struct intTriple handleInputs(void) {
 	int joystick_x = adc1_get_raw(ADC1_CHANNEL_2);
 	int joystick_y = adc1_get_raw(ADC1_CHANNEL_7);
-	int joystick_btn = gpio_get_level(18);
+	int joystick_btn = gpio_get_level(GPIO_NUM_18);
 	struct intTriple returnValues = {joystick_x, joystick_y, joystick_btn};
 	return returnValues;
 
@@ -408,20 +435,21 @@ Private void gameLoop(void) {
 }
 
 Private void menuLoop(void) {
-	if(xTaskGetTickCount() - lastRenderTicks > 40) {
-		drawMenu();
-		lastRenderTicks = xTaskGetTickCount();
-	}
+
+	drawMenu();
+
 	struct intTriple returnValues = handleInputs();
 	int joystick_x = returnValues.a;
 	int joystick_y = returnValues.b;
 	int joystick_btn = returnValues.c;
-	if (joystick_y > 4000 && selectedMenuBtn != 4) {
+	if (joystick_x > 4000 && selectedMenuBtn != 4) {
 		selectedMenuBtn++;
-	} else if (joystick_y < 10 && selectedMenuBtn != 1) {
+		changeMenuSelection(selectedMenuBtn);
+	} else if (joystick_x < 10 && selectedMenuBtn != 1) {
 		selectedMenuBtn--;
+		changeMenuSelection(selectedMenuBtn);
 	}
-	if (joystick_btn == 1) {
+	if (joystick_btn == 0) {
 		if (selectedMenuBtn != 4) {
 			level = option;
 			currentScreen = SCREEN_GAME;
@@ -434,21 +462,39 @@ Private void menuLoop(void) {
 	}
 }
 
-/* Private void optionsLoop(void) {
-	if(xTaskGetTickCount() - lastRenderTicks > 40) {
-		drawOptions();
-		lastRenderTicks = xTaskGetTickCount();
+Private void updateOptionSelection(int option) {
+	const char* optionspath = "/images/speed1.bmp";
+
+	if (option == 2){
+		const char* optionspath = "/images/speed2.bmp";
+	} else if (option == 3){
+		const char* optionspath = "/images/speed3.bmp";
 	}
+
+	priv_settings_buffer = heap_caps_malloc(100 * 20 * sizeof(uint16_t), MALLOC_CAP_DMA);
+	assert(priv_settings_buffer);
+	sdCard_Read_bmp_file(optionspath, priv_settings_buffer);
+}
+
+Private void optionsLoop(void) {
+
+	drawOptions();
+
 	struct intTriple returnValues = handleInputs();
 	int joystick_x = returnValues.a;
 	int joystick_y = returnValues.b;
 	int joystick_btn = returnValues.c;
 	if (joystick_x > 4000 && gameSpeed != 3) {
 		gameSpeed++;
+		updateOptionSelection(gameSpeed);
 	} else if (joystick_x < 10 && gameSpeed != 1) {
 		gameSpeed--;
+		updateOptionSelection(gameSpeed);
 	}
-} */
+	if (joystick_btn == 1) {
+		currentScreen = SCREEN_MAIN_MENU;
+	}
+}
 
 Private void drawBackground(void) {
 	// Draw the background
@@ -459,21 +505,17 @@ Private void drawSnake(void) {
 
     // Clear previous snake position
 /* 	drawRectangleInFrameBuf(snake.body[snake.length - 1].x, snake.body[snake.length - 1].y, GRID_WIDTH, GRID_HEIGHT, COLOR_WHITE); */
-
-    // Draw the snake at its new position
-    for (int i = 0; i < snake.length; i++) {
-		if (i == 0){
-        	drawBmpInFrameBuf(snake.body[i].x, snake.body[i].y, GRID_WIDTH, GRID_HEIGHT, priv_snake_buffer);
-		} else {
-			drawBmpInFrameBuf(snake.body[i].x, snake.body[i].y, GRID_WIDTH, GRID_HEIGHT, priv_snake_body_buffer);
-		}
-    }
     // Update snake position
 	for (int i = snake.length - 1; i > 0; i--) {
 		snake.body[i].x = snake.body[i - 1].x;
 		snake.body[i].y = snake.body[i - 1].y;
 	}
 
+
+
+}
+
+Private void updateSnakePosition(void) {
     if (snake.direction == RIGHT) {
         snake.body[0].x += 20;
     } else if (snake.direction == DOWN) {
@@ -483,8 +525,14 @@ Private void drawSnake(void) {
     } else if (snake.direction == UP) {
         snake.body[0].y -= 20;
     }
-
-
+    // Draw the snake at its new position
+    for (int i = 0; i < snake.length; i++) {
+		if (i == 0){
+        	drawBmpInFrameBuf(snake.body[i].x, snake.body[i].y, GRID_WIDTH, GRID_HEIGHT, priv_snake_buffer);
+		} else {
+			drawBmpInFrameBuf(snake.body[i].x, snake.body[i].y, GRID_WIDTH, GRID_HEIGHT, priv_snake_body_buffer);
+		}
+    }
 }
 
 Private void foodSpawn(void) {
@@ -542,6 +590,7 @@ Private void initLevel(void) {
 	const TickType_t xFrequency = (40u / portTICK_PERIOD_MS) * gameSpeed;
 
 	// Reset the snake
+	snake.status = 1;
 	snake.length = 1;
 	snake.body[0].x = (rand() % (DISPLAY_WIDTH / GRID_WIDTH))*GRID_WIDTH;
 	snake.body[0].y = (rand() % (DISPLAY_HEIGHT / GRID_HEIGHT))*GRID_HEIGHT;
@@ -559,9 +608,9 @@ Private void drawEnginaator(void) {
 }
 
 Private void snakeDie(void) {
-
+	snake.status = 0;
+	currentScreen = SCREEN_MAIN_MENU;
 	printf("Snake ded\n");
-	initLevel();
 }
 
 Private void snakeCollision(void) {
